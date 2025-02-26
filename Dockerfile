@@ -23,4 +23,4 @@ EXPOSE 5000
 ENV FLASK_APP=app.py
 
 # Start the Flask app with Gunicorn
-CMD ["gunicorn", "-b", "0.0.0.0:5000", "app:app"]
+#CMD ["gunicorn", "-b", "0.0.0.0:5000", "app:app"]
