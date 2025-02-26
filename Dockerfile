@@ -1,26 +1,20 @@
-# Use official Python image as the base
-FROM python:3.10
+# Use an official Python runtime as a parent image
+FROM python:3.9
 
-# Install system dependencies for Tesseract and PDF processing
-RUN apt-get update && apt-get install -y \
-    tesseract-ocr \
-    libtesseract-dev \
-    poppler-utils
-
-# Set the working directory in the container
+# Set the working directory
 WORKDIR /app
 
-# Copy all project files into the container
-COPY . .
+# Copy the current directory contents into the container at /app
+COPY . /app
 
-# Install Python dependencies
+# Install dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Expose the port Flask runs on
-EXPOSE 5000
+# Install Tesseract-OCR
+RUN apt-get update && apt-get install -y tesseract-ocr
 
-# Set environment variables for Flask
-ENV FLASK_APP=app.py
+# Expose port 8080
+EXPOSE 8080
 
-# Start the Flask app with Gunicorn
-CMD ["gunicorn", "-b", "0.0.0.0:5000", "app:app"]
+# Run the application
+CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:8080", "app:app"]
