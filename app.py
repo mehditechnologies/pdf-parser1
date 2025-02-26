@@ -143,5 +143,4 @@ def upload_resume():
 
 
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5000))  # Railway sets PORT dynamically
-    app.run(debug=True, host="0.0.0.0", port=port)  # ✅ Must listen on 0.0.0.0
+    app.run(host="0.0.0.0", port=8080, debug=True)
