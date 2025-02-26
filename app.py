@@ -69,6 +69,7 @@ def extract_resume_sections(pdf_text):
     2. title
     3. email
     4. skills (avoid subheadings)
+    5. contact
     '''
     input_text = f"Context: {pdf_text}\nInstruction: {prompt}\nAnswer:"
     payload = {
@@ -117,6 +118,7 @@ def upload_resume():
                 "full_name": resume_data.get("full_name", ""),
                 "title": resume_data.get("title", ""),
                 "email": resume_data.get("email", ""),
+                "Contact": resume_data.get("contact", "")
                 "skills": "; ".join(resume_data.get("skills", []))
             }
             extracted_data.append(structured_output)
