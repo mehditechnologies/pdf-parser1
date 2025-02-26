@@ -15,7 +15,7 @@ app = Flask(__name__, template_folder="templates")
 CORS(app, supports_credentials=True)
 
 API_URL = "https://api-inference.huggingface.co/models/google/gemma-2-2b-it"
-HEADERS = {f"Authorization": "Bearer {API_KEY}"}
+HEADERS = {"Authorization": f"Bearer {API_KEY}"}
 
 pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 
