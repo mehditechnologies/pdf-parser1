@@ -118,7 +118,7 @@ def upload_resume():
                 "full_name": resume_data.get("full_name", ""),
                 "title": resume_data.get("title", ""),
                 "email": resume_data.get("email", ""),
-                "contact": resume_data.get("contact", ""),
+                "mobile_no": resume_data.get("mobile_no", ""),
                 "skills": "; ".join(resume_data.get("skills", []))
             }
             extracted_data.append(structured_output)
