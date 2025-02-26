@@ -17,4 +17,4 @@ RUN apt-get update && apt-get install -y tesseract-ocr
 EXPOSE 8080
 
 # Run the application
-CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:8080", "app:app"]
+CMD ["gunicorn", "--timeout", "300", "--workers", "2", "--bind", "0.0.0.0:8080", "app:app"]
