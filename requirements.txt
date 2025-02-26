@@ -3,3 +3,5 @@ gevent
 Flask-Cors 
 Flask
 pdfplumber
+pytesseract
+flask
