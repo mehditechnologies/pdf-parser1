@@ -7,7 +7,4 @@ pytesseract
 flask
 pdf2image
 requests
-json
-re
 pandas
-io
