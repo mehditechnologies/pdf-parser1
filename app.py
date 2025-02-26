@@ -9,7 +9,6 @@ import re
 import pandas as pd
 import io
 from flask_cors import CORS
-from .env import API_KEY
 
 app = Flask(__name__, template_folder="templates")
 CORS(app, supports_credentials=True)
