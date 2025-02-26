@@ -69,7 +69,7 @@ def extract_resume_sections(pdf_text):
     2. title
     3. email
     4. skills (avoid subheadings)
-    5. contact (complete phone number)(starts with 0 or +92)
+    5. mobile_no (complete phone number)(starts with 0 or +92)
     '''
     input_text = f"Context: {pdf_text}\nInstruction: {prompt}\nAnswer:"
     payload = {
