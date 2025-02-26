@@ -16,7 +16,7 @@ CORS(app, supports_credentials=True)
 API_URL = "https://api-inference.huggingface.co/models/google/gemma-2-2b-it"
 HEADERS = {"Authorization": "Bearer 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"}
 
-pytesseract.pytesseract.tesseract_cmd = "/usr/bin/tesseract"
+pytesseract.pytesseract.tesseract_cmd = "/tesseract"
 
 
 @app.route('/')
