@@ -7,146 +7,56 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
     <style>
-        body {
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            font-family: 'Arial', sans-serif;
-            color: #fff;
-        }
-        .container {
-            margin-top: 50px;
-        }
-        .upload-box {
-            border: 2px dashed #fff;
-            padding: 30px;
-            text-align: center;
-            cursor: pointer;
-            transition: 0.3s;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
-        }
-        .upload-box:hover {
-            background: rgba(255, 255, 255, 0.2);
-        }
-        #progress {
-            display: none;
-            margin-top: 20px;
-        }
-        .json-output {
-            background: #fff;
-            color: #333;
-            padding: 15px;
-            border-radius: 5px;
-            margin-top: 20px;
-            overflow: auto;
-            max-height: 300px;
-        }
-        .btn-upload {
-            background: #ff4b2b;
-            color: white;
-            font-size: 16px;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            transition: 0.3s;
-        }
-        .btn-upload:hover {
-            background: #ff6b4b;
-        }
-        #file-list {
-            margin-top: 10px;
-            text-align: left;
-        }
-        #file-list ul {
-            list-style-type: none;
-            padding: 0;
-        }
-        #file-list li {
-            background: rgba(255, 255, 255, 0.2);
-            padding: 5px 10px;
-            margin: 5px 0;
-            border-radius: 5px;
-        }
+        body { background: linear-gradient(135deg, #667eea, #764ba2); font-family: 'Arial', sans-serif; color: #fff; }
+        .container { margin-top: 50px; }
+        .upload-box { border: 2px dashed #fff; padding: 30px; text-align: center; cursor: pointer; transition: 0.3s; border-radius: 10px; background: rgba(255, 255, 255, 0.1); }
+        .upload-box:hover { background: rgba(255, 255, 255, 0.2); }
+        #progress { display: none; margin-top: 20px; }
     </style>
 </head>
 <body>
-
 <div class="container text-center">
     <h2 class="mb-4">Upload Multiple Resumes</h2>
-
     <label class="upload-box" id="upload-box">
         <i class="fas fa-upload fa-3x"></i>
         <p>Click or Drag & Drop to Upload PDFs</p>
         <input type="file" class="form-control" id="file-input" accept="application/pdf" multiple>
     </label>
 
-    <div id="file-list" class="text-start">
-        <strong>Selected Files:</strong>
-        <ul id="file-names"></ul>
-    </div>
-
-    <button class="btn-upload mt-3" onclick="uploadFiles()" id="upload-btn">Upload</button>
-
+    <button class="btn btn-primary mt-3" onclick="uploadFiles()">Upload</button>
     <div id="progress" class="text-center">
-        <div class="spinner-border text-light" role="status">
-            <span class="visually-hidden">Processing...</span>
-        </div>
+        <div class="spinner-border text-light" role="status"><span class="visually-hidden">Processing...</span></div>
         <p>Extracting data...</p>
     </div>
-
-    <h3 class="mt-4">Extracted JSON Output:</h3>
-    <pre id="json-output" class="json-output d-none"></pre>
 </div>
 
 <script>
-    const uploadBox = document.getElementById("upload-box");
-    const fileInput = document.getElementById("file-input");
-    const uploadBtn = document.getElementById("upload-btn");
-    const fileNamesList = document.getElementById("file-names");
-
-    uploadBox.addEventListener("click", () => fileInput.click());
-
-    fileInput.addEventListener("change", () => {
-        fileNamesList.innerHTML = ""; // Clear previous list
-        for (let file of fileInput.files) {
-            let listItem = document.createElement("li");
-            listItem.textContent = file.name;
-            fileNamesList.appendChild(listItem);
-        }
-    });
-
     function uploadFiles() {
+        let fileInput = document.getElementById("file-input");
         if (fileInput.files.length === 0) {
             alert("Please select at least one PDF file.");
             return;
         }
 
         document.getElementById("progress").style.display = "block";
-        uploadBtn.disabled = true;
-
         let formData = new FormData();
-        for (let i = 0; i < fileInput.files.length; i++) {
-            formData.append("files", fileInput.files[i]);
+        for (let file of fileInput.files) {
+            formData.append("files", file);
         }
 
-        fetch("http://127.0.0.1:5000/upload_resume", {
-            method: "POST",
-            body: formData
+        fetch("/upload_resume", { method: "POST", body: formData })
+        .then(response => response.blob())
+        .then(blob => {
+            let url = window.URL.createObjectURL(blob);
+            let a = document.createElement("a");
+            a.href = url;
+            a.download = "extracted_resumes.csv";
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
         })
-        .then(response => response.json())
-        .then(data => {
-            document.getElementById("json-output").textContent = JSON.stringify(data, null, 2);
-            document.getElementById("json-output").classList.remove("d-none");
-        })
-        .catch(error => {
-            console.error("Error:", error);
-            alert("Error uploading files.");
-        })
-        .finally(() => {
-            document.getElementById("progress").style.display = "none";
-            uploadBtn.disabled = false;
-        });
+        .finally(() => document.getElementById("progress").style.display = "none");
     }
 </script>
-
 </body>
 </html>
