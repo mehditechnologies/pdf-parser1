@@ -9,12 +9,13 @@ import re
 import pandas as pd
 import io
 from flask_cors import CORS
+from .env import API_KEY
 
 app = Flask(__name__, template_folder="templates")
 CORS(app, supports_credentials=True)
 
 API_URL = "https://api-inference.huggingface.co/models/google/gemma-2-2b-it"
-HEADERS = {"Authorization": "Bearer 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"}
+HEADERS = {f"Authorization": "Bearer {API_KEY}"}
 
 pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 
