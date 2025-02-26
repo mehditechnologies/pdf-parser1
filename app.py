@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, render_template, Response
 import pdfplumber
 import pytesseract
 from pdf2image import convert_from_path
@@ -7,25 +7,21 @@ import json
 import os
 import re
 import pandas as pd
+import io
 from flask_cors import CORS
 
 app = Flask(__name__, template_folder="templates")
 CORS(app, supports_credentials=True)
 
-JSON_FILE = "resume_data.json"
-CSV_FILE = "resume_data.csv"
 API_URL = "https://api-inference.huggingface.co/models/google/gemma-2-2b-it"
 HEADERS = {"Authorization": "Bearer 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"}
 
 pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 
-DEBUG_MODE = True  # Set to False to disable extra logging
-MAX_LENGTH = 3000  # Limit text size to prevent API truncation
-
 
 @app.route('/')
 def index():
-    return render_template("index.html")
+    return render_template("index.html")  # ✅ Serves the upload page
 
 
 def _read_file_from_path(path):
@@ -59,31 +55,20 @@ def query_huggingface(payload):
     """Sends resume text to Hugging Face API for structured extraction."""
     try:
         response = requests.post(API_URL, headers=HEADERS, json=payload)
-        response_text = response.json()
-        return response_text
+        return response.json()
     except requests.exceptions.RequestException as e:
         print(f"❌ Error calling Hugging Face API: {e}")
         return None
 
 
-def extract_json_from_response(response_text):
-    """Extracts JSON data safely from API response, even if extra text exists."""
-    json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
-    if json_match:
-        try:
-            return json.loads(json_match.group())  # Parse JSON
-        except json.JSONDecodeError:
-            return {"error": "Invalid JSON format"}
-    return {"error": "No JSON data found"}
-
-
 def extract_resume_sections(pdf_text):
     prompt = '''
-    You are an AI bot designed to act as a professional for parsing resumes. You are given a resume data, and your job is to extract the following information & Return the extracted information **strictly in JSON format only** without any extra text.Return ONLY a JSON object between triple backticks. Use "HTML/CSS" instead of "HTML\\CSS"
+    You are an AI bot designed to act as a professional for parsing resumes. 
+    Extract the following details **strictly in JSON format** without any extra text:
     1. full_name
     2. title
     3. email
-    4. skills (skills only avoid subheadings)
+    4. skills (avoid subheadings)
     '''
     input_text = f"Context: {pdf_text}\nInstruction: {prompt}\nAnswer:"
     payload = {
@@ -93,6 +78,7 @@ def extract_resume_sections(pdf_text):
     output = query_huggingface(payload)
     if not output or not isinstance(output, list) or 'generated_text' not in output[0]:
         return {"error": "Invalid response from Hugging Face API"}
+
     response = output[0]['generated_text']
 
     json_match = re.search(r'\{.*\}', response, re.DOTALL)
@@ -105,80 +91,16 @@ def extract_resume_sections(pdf_text):
     return {"error": "No JSON data found in the response"}
 
 
-def save_to_json(data):
-    """Saves extracted resume data into JSON file."""
-    if os.path.exists(JSON_FILE):
-        with open(JSON_FILE, "r", encoding="utf-8") as file:
-            try:
-                existing_data = json.load(file)
-            except json.JSONDecodeError:
-                existing_data = []
-    else:
-        existing_data = []
-
-    existing_data.extend(data)
-
-    with open(JSON_FILE, "w", encoding="utf-8") as file:
-        json.dump(existing_data, file, indent=4)
-
-
-def save_to_csv(data):
-    """Saves extracted resume data into CSV file, creating one if it doesn't exist."""
-    flattened_data = []
-
-    for item in data:
-        file_name = item.get("file_name", "Unknown")
-        resume_details = item.get("resume_details", {})
-
-        if not isinstance(resume_details, dict):
-            resume_details = {"error": "Invalid resume details format"}
-
-        flat_dict = {
-            "file_name": file_name,
-            "full_name": resume_details.get("full_name", ""),
-            "Email": resume_details.get("email", ""),
-            "title": resume_details.get("title", ""),
-            "skills": "; ".join(resume_details.get("skills", [])),
-            "error": resume_details.get("error", "")
-        }
-
-        # ✅ Handle projects properly (ensure it's a list)
-        projects = resume_details.get("projects", [])
-
-        if isinstance(projects, list) and projects:
-            project_name = projects[0].get("name", "") if isinstance(projects[0], dict) else str(projects[0])
-        else:
-            project_name = str(projects)
-
-        flat_dict["projects"] = project_name  # Always store as a string
-
-        flattened_data.append(flat_dict)
-
-    try:
-        df = pd.DataFrame(flattened_data)
-
-        # ✅ Check if CSV exists, if not create it
-        file_exists = os.path.isfile(CSV_FILE)
-
-        # ✅ Append to existing CSV or create new one
-        df.to_csv(CSV_FILE, index=False, mode='a', header=not file_exists)
-        print(f"✅ Successfully saved data to {CSV_FILE}")
-        return True
-    except Exception as e:
-        print(f"❌ Error saving to CSV: {e}")
-        return False
-
-
 @app.route('/upload_resume', methods=['POST'])
 def upload_resume():
-    """Handles multiple file uploads and extracts structured data."""
+    """Handles multiple file uploads and returns a downloadable CSV file."""
     if 'files' not in request.files:
-        return jsonify({'error': 'No files part'}), 400
+        return {"error": "No files part"}, 400
 
     files = request.files.getlist('files')
 
     if not files or all(file.filename == '' for file in files):
-        return jsonify({'error': 'No selected files'}), 400
+        return {"error": "No selected files"}, 400
 
     extracted_data = []
 
@@ -192,24 +114,30 @@ def upload_resume():
 
             structured_output = {
                 "file_name": file.filename,
-                "resume_details": resume_data
+                "full_name": resume_data.get("full_name", ""),
+                "title": resume_data.get("title", ""),
+                "email": resume_data.get("email", ""),
+                "skills": "; ".join(resume_data.get("skills", []))
             }
             extracted_data.append(structured_output)
 
         except Exception as e:
-            structured_output = {
+            extracted_data.append({
                 "file_name": file.filename,
-                "resume_details": {"error": f"Processing error: {str(e)}"}
-            }
-            extracted_data.append(structured_output)
+                "error": f"Processing error: {str(e)}"
+            })
 
-    save_to_json(extracted_data)
-    save_to_csv(extracted_data)
+    # ✅ Convert extracted data into CSV format
+    df = pd.DataFrame(extracted_data)
+    csv_buffer = io.StringIO()
+    df.to_csv(csv_buffer, index=False)
 
-    return jsonify({
-        'message': 'All files processed successfully',
-        'resumes': extracted_data
-    }), 200
+    # ✅ Return CSV file as a response to the frontend
+    return Response(
+        csv_buffer.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-Disposition": "attachment; filename=extracted_resumes.csv"}
+    )
 
 
 if __name__ == '__main__':
