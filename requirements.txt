@@ -5,3 +5,4 @@ Flask
 pdfplumber
 pytesseract
 flask
+pdf2image
